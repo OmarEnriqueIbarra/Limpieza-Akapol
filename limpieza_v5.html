@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registro de limpieza · Akapol</title>
+<style>
+  :root{--az:#0b3d91;--az2:#e8eef9;--rojo:#c62828;--rojo2:#fdecea;--verde:#2e7d32;--verde2:#e8f5e9;--gris:#666;--borde:#d6dbe4}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f3f5f9;color:#222}
+  header{background:var(--az);color:#fff;padding:16px;text-align:center}
+  header h1{margin:0;font-size:1.2rem}
+  header p{margin:4px 0 0;font-size:.9rem;opacity:.9}
+  main{max-width:520px;margin:0 auto;padding:14px}
+  .card{background:#fff;border:1px solid var(--borde);border-radius:12px;padding:14px;margin-bottom:14px}
+  .card h2{margin:0 0 10px;font-size:1rem;color:var(--az)}
+  .card h3{margin:12px 0 8px;font-size:.85rem;color:var(--gris);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+  label{display:block;font-size:.85rem;color:var(--gris);margin:8px 0 4px}
+  select,textarea{width:100%;padding:10px;border:1px solid var(--borde);border-radius:8px;font-size:1rem;font-family:inherit;background:#fff}
+  textarea{min-height:60px;resize:vertical}
+  .lugar{font-size:1.05rem;font-weight:700;color:var(--az)}
+  .hora{font-size:.85rem;color:var(--gris);margin-top:4px}
+  .opciones{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .op{padding:12px 8px;border:2px solid var(--borde);border-radius:10px;background:#fff;font-size:.9rem;cursor:pointer;text-align:center}
+  .op.on{border-color:var(--verde);background:var(--verde2);color:var(--verde);font-weight:600}
+  .op.on::before{content:"✓ "}
+  .todas{border:0;background:none;color:var(--az);font-size:.85rem;cursor:pointer;padding:0;float:right}
+  .rep{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 0;border-bottom:1px solid #eee}
+  .rep:last-child{border-bottom:0}
+  .rep span{font-size:.92rem;flex:1}
+  .rep button{padding:8px 10px;border:2px solid var(--borde);border-radius:8px;background:#fff;font-size:.8rem;cursor:pointer;white-space:nowrap}
+  .rep button.si.on{border-color:var(--verde);background:var(--verde2);color:var(--verde);font-weight:600}
+  .rep button.no.on{border-color:var(--rojo);background:var(--rojo2);color:var(--rojo);font-weight:600}
+  .ayuda{font-size:.8rem;color:var(--gris);margin:0 0 6px}
+  .btn{width:100%;padding:14px;border:0;border-radius:10px;font-size:1.05rem;font-weight:700;cursor:pointer}
+  .enviar{background:var(--az);color:#fff}
+  .wa{background:#25d366;color:#fff;margin-top:10px}
+  .sec{background:#fff;color:var(--az);border:2px solid var(--az);margin-top:10px}
+  .btn:disabled{background:#b7c2b9;color:#fff;cursor:not-allowed}
+  .msg{border-radius:10px;padding:14px;margin-bottom:10px;font-size:.95rem;line-height:1.45}
+  .msg.ok{background:var(--verde2);color:var(--verde)}
+  .msg.no{background:var(--rojo2);color:var(--rojo)}
+  .grupos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+  .grupo{padding:14px 8px;border:2px solid var(--az);border-radius:10px;background:#fff;color:var(--az);font-size:.95rem;font-weight:600;cursor:pointer}
+  .grupo.on{background:var(--az);color:#fff}
+  .oculto{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧽 Registro de limpieza</h1>
+  <p id="titLugar">Akapol</p>
+</header>
+
+<main>
+ <div id="form">
+  <div class="card">
+    <h2>1. Lugar y responsable</h2>
+    <div id="lugarFijo" class="oculto"><div class="lugar" id="lugarTxt"></div></div>
+    <div id="lugarSel" class="oculto">
+      <div class="grupos">
+        <button type="button" class="grupo" id="gBano" onclick="grupo('bano')">🚻 Baños y vestuarios</button>
+        <button type="button" class="grupo" id="gOfi" onclick="grupo('oficina')">🏢 Oficinas</button>
+      </div>
+      <div id="lugarWrap" class="oculto">
+        <label for="lugar" id="lugarLbl">Lugar</label>
+        <select id="lugar"></select>
+      </div>
+    </div>
+    <div class="hora" id="horaTxt"></div>
+    <label for="quien">¿Quién realizó la limpieza?</label>
+    <select id="quien"></select>
+  </div>
+
+  <div class="card" id="cardTareas">
+    <h2>2. Tareas realizadas <button type="button" class="todas" onclick="todasDiarias()">Marcar todas las diarias</button></h2>
+    <div id="tareas"></div>
+  </div>
+
+  <div class="card" id="cardRepo">
+    <h2 id="titRepo">3. Reposición</h2>
+    <p class="ayuda">Marcá solo lo que repusiste o lo que no había. Si no tocás nada, queda como "no hizo falta".</p>
+    <div id="repo"></div>
+  </div>
+
+  <div class="card">
+    <h2>Observaciones (opcional)</h2>
+    <textarea id="obs"></textarea>
+  </div>
+
+  <button class="btn enviar" id="btnEnviar" onclick="enviar()" disabled>Registrar limpieza</button>
+ </div>
+
+ <div id="resultado" class="oculto">
+  <div id="mensajes"></div>
+  <button class="btn wa oculto" id="btnWa">Avisar falta de stock por WhatsApp</button>
+  <button class="btn sec" onclick="location.href=location.href">Nuevo registro</button>
+ </div>
+</main>
+
+<script>
+// ═══════════ CONFIGURACIÓN (editar acá) ═══════════
+var URL_SCRIPT = 'PEGAR_ACA_URL_DE_LA_IMPLEMENTACION';   // termina en /exec
+var WHATSAPP = '5491164101134';
+
+var PERSONAL = ['Gomez Javier','Vega Hugo Daniel','Anagua Ruben','Lartigas Matias','Gomez Tomas',
+                'Britez Jessica','Romero Alejandra','Acuña Alejandra','Paiz Maria','Franco Martin'];
+
+// Tareas y reposición por tipo de lugar (copiado de la planilla actual)
+var TIPOS = {
+  bano: {
+    diario:  ['Inodoros','Mingitorios','Bidet','Lavamanos','Duchas','Espejos','Pisos','Paredes','Puertas'],
+    periodo: 'Semanal',
+    periodicas: ['Vidrios de ventanas','Limpieza de cofres','Ventiladores','Duchas con máquina'],
+    tituloRepo: '3. Elementos de higiene',
+    repo: ['Papel higiénico','Toallas de papel','Jabón','Aromatizante','Rejillas aromatizantes','Pastillas aromatizantes']
+  },
+  oficina: {
+    diario:  ['Pisos','Muebles','Recolección de residuos','Dispenser'],
+    periodo: 'Quincenal',
+    periodicas: ['Telarañas','Vidrios','Zócalos','Baños'],
+    tituloRepo: '',
+    repo: []   // el abastecimiento de refrigerio se controla con el Gestor de Refrigerios
+  }
+};
+
+// id (va en el QR) : [nombre, tipo]
+var LUGARES = {
+  "op-gral":           ["Baño y vestuario General – Operarios",'bano'],
+  "opa-gral":          ["Baño y vestuario General – Operarias",'bano'],
+  "superv":            ["Baño y vestuario – Supervisores",'bano'],
+  "supervas":          ["Baño y vestuario – Supervisoras",'bano'],
+  "hall-muj":          ["Baño Hall Gerencia – Mujeres",'bano'],
+  "hall-hom":          ["Baño Hall Gerencia – Hombre",'bano'],
+  "ger-muj":           ["Baño Gerencia – Mujeres",'bano'],
+  "ger-hom":           ["Baño Gerencia – Hombre",'bano'],
+  "of-abajo-pomos":    ["Baño Oficina Abajo – Pomos",'bano'],
+  "of-arriba-pomos":   ["Baño Oficina Arriba – Pomos",'bano'],
+  "zona-limpia":       ["Baño – Zona Limpia",'bano'],
+  "of-exped":          ["Baño Oficina – Expedición",'bano'],
+  "op-exped":          ["Baño Operarios – Expedición",'bano'],
+  "porteria":          ["Baño – Portería",'bano'],
+  "cam-alm":           ["Baño Camionero – Almacenes",'bano'],
+  "cam-exp":           ["Baño Camionero – Expedición",'bano'],
+  "comedor":           ["Baño y vestuario – Comedor",'bano'],
+  "of-vigilancia-porteria":            ["Vigilancia – Portería",'oficina'],
+  "of-gerencia-of-general":            ["Gerencia – Of. general",'oficina'],
+  "of-gerencia-sala-1":                ["Gerencia – Sala 1",'oficina'],
+  "of-personal-of-personal":           ["Personal – Of.personal",'oficina'],
+  "of-administracion-of-adm":          ["Administración – Of.Adm.",'oficina'],
+  "of-administracion-sala-2":          ["Administración – Sala 2",'oficina'],
+  "of-control-de-calidad-of-jefatura": ["Control de Calidad – Of.Jefatura",'oficina'],
+  "of-control-de-calidad-of-adm":      ["Control de Calidad – Of.Adm.",'oficina'],
+  "of-control-de-calidad-of-calidad":  ["Control de Calidad – Of.Calidad",'oficina'],
+  "of-control-de-calidad-of-laborat":  ["Control de Calidad – Of.Laborat.",'oficina'],
+  "of-enfermeria-consultorio":         ["Enfermería – Consultorio",'oficina'],
+  "of-produccion-produccion":          ["Producción – Producción",'oficina'],
+  "of-produccion-seguridad":           ["Producción – Seguridad",'oficina'],
+  "of-produccion-laboratorio-fab":     ["Producción – Laboratorio fab",'oficina'],
+  "of-produccion-of-ing":              ["Producción – Of.Ing",'oficina'],
+  "of-pomos-of-adm-arriba":            ["Pomos – Of.Adm.Arriba",'oficina'],
+  "of-pomos-fund":                     ["Pomos – Fund.",'oficina'],
+  "of-pomos-mantenimiento":            ["Pomos – Mantenimiento",'oficina'],
+  "of-pomos-of-de-supervisores":       ["Pomos – Of. de Supervisores",'oficina'],
+  "of-almacenes-oficina":              ["Almacenes – Oficina",'oficina'],
+  "of-almacenes-oficina-delegados":    ["Almacenes – Oficina delegados",'oficina'],
+  "of-mantenimiento-ingenieria":       ["Mantenimiento – Ingeniería",'oficina'],
+  "of-mantenimiento-of-super":         ["Mantenimiento – Of.super",'oficina'],
+  "of-expedicion-oficina":             ["Expedición – Oficina",'oficina'],
+  "of-expedicion-casita-de-entrada":   ["Expedición – Casita de entrada",'oficina'],
+  "of-sala-sala-3":                    ["Sala – Sala 3",'oficina'],
+  "of-sala-sala-4":                    ["Sala – Sala 4",'oficina']
+};
+// ═══════════════════════════════════════════════════
+
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
+function dos(n){return (n<10?'0':'')+n}
+
+var lugarId='', tipo=null, tareasSel={}, repoSel={};  // repoSel[i] = 'Repuesto' | 'Sin stock'
+
+// Lugar: viene fijo en el QR (?lugar=...) o se elige
+var q=(location.search.match(/[?&]lugar=([^&]+)/)||[])[1];
+if(q && LUGARES[decodeURIComponent(q)]){
+  lugarId=decodeURIComponent(q);
+  $('lugarFijo').classList.remove('oculto');
+  $('lugarTxt').textContent='📍 '+LUGARES[lugarId][0];
+  $('titLugar').textContent=LUGARES[lugarId][0];
+  armar();
+} else {
+  $('lugarSel').classList.remove('oculto');
+  $('lugar').addEventListener('change',function(){ lugarId=this.value; armar(); });
+  $('cardTareas').classList.add('oculto'); $('cardRepo').classList.add('oculto');
+}
+
+$('quien').innerHTML='<option value="">— Elegí tu nombre —</option>'+PERSONAL.map(function(p){return '<option>'+esc(p)+'</option>'}).join('');
+$('quien').addEventListener('change',validar);
+
+function grupo(g){
+  $('gBano').classList.toggle('on',g==='bano'); $('gOfi').classList.toggle('on',g==='oficina');
+  $('lugarWrap').classList.remove('oculto');
+  $('lugarLbl').textContent = g==='bano' ? '¿Qué baño o vestuario?' : '¿Qué oficina?';
+  var keys=Object.keys(LUGARES).filter(function(k){return LUGARES[k][1]===g});
+  var h='<option value="">— Elegí de la lista —</option>';
+  if(g==='bano'){
+    h+=keys.map(function(k){return '<option value="'+k+'">'+esc(LUGARES[k][0])+'</option>'}).join('');
+  } else {  // oficinas agrupadas por área
+    var areas={};
+    keys.forEach(function(k){ var p=LUGARES[k][0].split(' – '); (areas[p[0]]=areas[p[0]]||[]).push([k,p.slice(1).join(' – ')]); });
+    Object.keys(areas).forEach(function(a){
+      h+='<optgroup label="'+esc(a)+'">'+areas[a].map(function(x){return '<option value="'+x[0]+'">'+esc(x[1])+'</option>'}).join('')+'</optgroup>';
+    });
+  }
+  $('lugar').innerHTML=h; lugarId=''; armar();
+}
+function turno(d){ return d.getHours()<14?'Turno mañana':'Turno tarde'; }
+function reloj(){ var d=new Date(); $('horaTxt').textContent='🕐 '+dos(d.getDate())+'/'+dos(d.getMonth()+1)+' · '+dos(d.getHours())+':'+dos(d.getMinutes())+' · '+turno(d)+' (se registra sola)'; }
+reloj(); setInterval(reloj,30000);
+
+function armar(){
+  tareasSel={}; repoSel={};
+  if(!lugarId){ $('cardTareas').classList.add('oculto'); $('cardRepo').classList.add('oculto'); validar(); return; }
+  tipo=TIPOS[LUGARES[lugarId][1]];
+  $('cardTareas').classList.remove('oculto'); $('cardRepo').classList.toggle('oculto',!tipo.repo.length);
+  var h='<h3>Diario</h3><div class="opciones">'+tipo.diario.map(function(t,i){return '<button type="button" class="op" id="t'+i+'" onclick="tarea('+i+')">'+esc(t)+'</button>'}).join('')+'</div>';
+  var n=tipo.diario.length;
+  h+='<h3>'+tipo.periodo+' (si corresponde hoy)</h3><div class="opciones">'+tipo.periodicas.map(function(t,i){return '<button type="button" class="op" id="t'+(n+i)+'" onclick="tarea('+(n+i)+')">'+esc(t)+'</button>'}).join('')+'</div>';
+  $('tareas').innerHTML=h;
+  $('titRepo').textContent=tipo.tituloRepo;
+  $('repo').innerHTML=tipo.repo.map(function(r,i){
+    return '<div class="rep"><span>'+esc(r)+'</span>'+
+      '<button type="button" class="si" id="rs'+i+'" onclick="repo('+i+',\'Repuesto\')">Repuse</button>'+
+      '<button type="button" class="no" id="rn'+i+'" onclick="repo('+i+',\'Sin stock\')">No había</button></div>';
+  }).join('');
+  validar();
+}
+function todasTareas(){ return tipo.diario.concat(tipo.periodicas); }
+function tarea(i){ tareasSel[i]=!tareasSel[i]; $('t'+i).classList.toggle('on',tareasSel[i]); validar(); }
+function todasDiarias(){ for(var i=0;i<tipo.diario.length;i++){ tareasSel[i]=true; $('t'+i).classList.add('on'); } validar(); }
+function repo(i,v){
+  repoSel[i]= repoSel[i]===v ? '' : v;
+  $('rs'+i).classList.toggle('on',repoSel[i]==='Repuesto');
+  $('rn'+i).classList.toggle('on',repoSel[i]==='Sin stock');
+}
+function validar(){
+  var ok = lugarId && $('quien').value && tipo && todasTareas().some(function(_,i){return tareasSel[i]});
+  $('btnEnviar').disabled=!ok;
+}
+
+function enviar(){
+  var tt=todasTareas();
+  var datos={
+    lugar: LUGARES[lugarId][0],
+    quien: $('quien').value,
+    hechas: tt.filter(function(_,i){return tareasSel[i]}),
+    noHechas: tipo.diario.filter(function(_,i){return !tareasSel[i]}),
+    repuesto: tipo.repo.filter(function(_,i){return repoSel[i]==='Repuesto'}),
+    sinStock: tipo.repo.filter(function(_,i){return repoSel[i]==='Sin stock'}),
+    obs: $('obs').value.trim()
+  };
+  var b=$('btnEnviar'); b.disabled=true; b.textContent='Registrando…';
+  fetch(URL_SCRIPT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(datos)})
+    .then(function(r){return r.json()})
+    .then(function(res){ if(!res.ok) throw new Error(res.error); mostrar(datos,res); })
+    .catch(function(){ b.disabled=false; b.textContent='Registrar limpieza'; alert('No se pudo registrar. Revisá la conexión e intentá de nuevo.'); });
+}
+
+function mostrar(datos,res){
+  var h='<div class="msg ok"><b>✅ Limpieza registrada</b><br>'+esc(datos.lugar)+'<br>'+esc(res.fecha)+' · '+esc(res.turno)+'<br>'+esc(datos.quien)+'</div>';
+  if(datos.sinStock.length){
+    h+='<div class="msg no"><b>⚠️ Sin stock:</b><br>'+datos.sinStock.map(function(s){return '• '+esc(s)}).join('<br>')+'</div>';
+    $('btnWa').classList.remove('oculto');
+    $('btnWa').onclick=function(){ abrirWa(datos,res); };
+    setTimeout(function(){ abrirWa(datos,res); },700);
+  }
+  $('mensajes').innerHTML=h;
+  $('form').classList.add('oculto');
+  $('resultado').classList.remove('oculto');
+  window.scrollTo(0,0);
+}
+
+function abrirWa(datos,res){
+  var L=['⚠️ *SIN STOCK · LIMPIEZA AKAPOL*','Fecha: '+res.fecha+' ('+res.turno+')','Lugar: '+datos.lugar,'Realizó: '+datos.quien,'','*No había:*'];
+  datos.sinStock.forEach(function(s){L.push('- '+s)});
+  if(datos.obs){ L.push(''); L.push('Obs: '+datos.obs); }
+  location.href='https://wa.me/'+WHATSAPP+'?text='+encodeURIComponent(L.join('\n'));
+}
+</script>
+</body>
+</html>
