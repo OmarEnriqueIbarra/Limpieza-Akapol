@@ -16,8 +16,12 @@
   .card h2{margin:0 0 10px;font-size:1rem;color:var(--az)}
   .card h3{margin:12px 0 8px;font-size:.85rem;color:var(--gris);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
   label{display:block;font-size:.85rem;color:var(--gris);margin:8px 0 4px}
-  select,textarea{width:100%;padding:10px;border:1px solid var(--borde);border-radius:8px;font-size:1rem;font-family:inherit;background:#fff}
+  select,textarea,input{width:100%;padding:10px;border:1px solid var(--borde);border-radius:8px;font-size:1rem;font-family:inherit;background:#fff}
   textarea{min-height:60px;resize:vertical}
+  #clave{letter-spacing:.4em;font-size:1.2rem}
+  .quien{margin-top:8px;font-size:.95rem;font-weight:600;min-height:1.3em}
+  .quien.ok{color:var(--verde)}
+  .quien.no{color:var(--rojo)}
   .lugar{font-size:1.05rem;font-weight:700;color:var(--az)}
   .hora{font-size:.85rem;color:var(--gris);margin-top:4px}
   .opciones{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -37,6 +41,12 @@
   .wa{background:#25d366;color:#fff;margin-top:10px}
   .sec{background:#fff;color:var(--az);border:2px solid var(--az);margin-top:10px}
   .btn:disabled{background:#b7c2b9;color:#fff;cursor:not-allowed}
+  .btnHist{width:100%;margin-top:10px;padding:10px;border:2px solid var(--az);border-radius:10px;background:var(--az2);color:var(--az);font-size:.92rem;font-weight:600;cursor:pointer}
+  .hist{margin-top:10px}
+  .reg{border-left:4px solid var(--az);background:#f8f9fc;border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:.88rem;line-height:1.4}
+  .reg .det{color:var(--gris);font-size:.82rem}
+  .reg .det.rojo{color:var(--rojo)}
+  .reg .ver{color:var(--verde);font-weight:600;font-size:.8rem}
   .msg{border-radius:10px;padding:14px;margin-bottom:10px;font-size:.95rem;line-height:1.45}
   .msg.ok{background:var(--verde2);color:var(--verde)}
   .msg.no{background:var(--rojo2);color:var(--rojo)}
@@ -55,7 +65,10 @@
 <main>
  <div id="form">
   <div class="card">
-    <h2>1. Lugar y responsable</h2>
+    <h2>1. Responsable y lugar</h2>
+    <label for="clave">¿Quién realizó la limpieza? Poné tu clave personal (4 números)</label>
+    <input id="clave" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off">
+    <div class="quien" id="quienTxt"></div>
     <div id="lugarFijo" class="oculto"><div class="lugar" id="lugarTxt"></div></div>
     <div id="lugarSel" class="oculto">
       <div class="grupos">
@@ -67,9 +80,9 @@
         <select id="lugar"></select>
       </div>
     </div>
+    <button type="button" class="btnHist oculto" id="btnHist" onclick="verHistorial()">📋 Ver limpiezas de los últimos 7 días</button>
+    <div class="hist oculto" id="hist"></div>
     <div class="hora" id="horaTxt"></div>
-    <label for="quien">¿Quién realizó la limpieza?</label>
-    <select id="quien"></select>
   </div>
 
   <div class="card" id="cardTareas">
@@ -102,9 +115,7 @@
 // ═══════════ CONFIGURACIÓN (editar acá) ═══════════
 var URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbzJ-Gk373JSz7wKJHJSr6SFOjrR_jKgASTvUFun5b8S008DI1GkTBK_mR6zlx_THp49/exec';   // termina en /exec
 var WHATSAPP = '5491164101134';
-
-var PERSONAL = ['Gomez Javier','Vega Hugo Daniel','Anagua Ruben','Lartigas Matias','Gomez Tomas',
-                'Britez Jessica','Romero Alejandra','Acuña Alejandra','Paiz Maria','Franco Martin'];
+// El personal y sus claves están en la pestaña "Personal" de la Google Sheet (el nombre sale de la clave).
 
 // Tareas y reposición por tipo de lugar (copiado de la planilla actual)
 var TIPOS = {
@@ -178,6 +189,25 @@ function esc(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;
 function dos(n){return (n<10?'0':'')+n}
 
 var lugarId='', tipo=null, tareasSel={}, repoSel={};  // repoSel[i] = 'Repuesto' | 'Sin stock'
+var quienNombre='', consulta=0;
+
+// Al completar los 4 números se busca la persona automáticamente
+function setQuien(txt,cls){ var e=$('quienTxt'); e.textContent=txt; e.className='quien'+(cls?' '+cls:''); }
+$('clave').addEventListener('input',function(){
+  this.value=this.value.replace(/\D/g,'').slice(0,4);
+  quienNombre=''; setQuien('',''); validar();
+  if(this.value.length<4) return;
+  var n=++consulta; setQuien('Buscando…','');
+  fetch(URL_SCRIPT+'?accion=identificar&clave='+encodeURIComponent(this.value))
+    .then(function(r){return r.json()})
+    .then(function(res){
+      if(n!==consulta) return;   // llegó tarde una consulta vieja
+      if(res.ok){ quienNombre=res.nombre; setQuien('👤 '+res.nombre,'ok'); }
+      else setQuien('⚠️ '+res.error,'no');
+      validar();
+    })
+    .catch(function(){ if(n===consulta) setQuien('⚠️ No se pudo verificar la clave. Revisá la conexión.','no'); });
+});
 
 // Lugar: viene fijo en el QR (?lugar=...) o se elige
 var q=(location.search.match(/[?&]lugar=([^&]+)/)||[])[1];
@@ -192,9 +222,6 @@ if(q && LUGARES[decodeURIComponent(q)]){
   $('lugar').addEventListener('change',function(){ lugarId=this.value; armar(); });
   $('cardTareas').classList.add('oculto'); $('cardRepo').classList.add('oculto');
 }
-
-$('quien').innerHTML='<option value="">— Elegí tu nombre —</option>'+PERSONAL.map(function(p){return '<option>'+esc(p)+'</option>'}).join('');
-$('quien').addEventListener('change',validar);
 
 function grupo(g){
   $('gBano').classList.toggle('on',g==='bano'); $('gOfi').classList.toggle('on',g==='oficina');
@@ -219,6 +246,8 @@ reloj(); setInterval(reloj,30000);
 
 function armar(){
   tareasSel={}; repoSel={};
+  $('hist').classList.add('oculto'); $('hist').innerHTML='';
+  $('btnHist').classList.toggle('oculto',!lugarId);
   if(!lugarId){ $('cardTareas').classList.add('oculto'); $('cardRepo').classList.add('oculto'); validar(); return; }
   tipo=TIPOS[LUGARES[lugarId][1]];
   $('cardTareas').classList.remove('oculto'); $('cardRepo').classList.toggle('oculto',!tipo.repo.length);
@@ -234,6 +263,31 @@ function armar(){
   }).join('');
   validar();
 }
+
+// Consulta de registros del sector (abierta, sin clave)
+function verHistorial(){
+  if(!lugarId) return;
+  var box=$('hist');
+  if(!box.classList.contains('oculto')){ box.classList.add('oculto'); return; }
+  box.classList.remove('oculto');
+  box.innerHTML='<p class="ayuda">Cargando…</p>';
+  fetch(URL_SCRIPT+'?accion=historial&lugar='+encodeURIComponent(LUGARES[lugarId][0]))
+    .then(function(r){return r.json()})
+    .then(function(res){
+      if(!res.ok) throw new Error(res.error);
+      if(!res.registros.length){ box.innerHTML='<p class="ayuda">Sin limpiezas registradas en los últimos 7 días.</p>'; return; }
+      box.innerHTML=res.registros.map(function(x){
+        return '<div class="reg"><b>'+esc(x.fecha)+' · '+esc(x.hora)+'</b> · '+esc(x.turno)+
+          (x.verificado?' <span class="ver">✔ Verificado</span>':'')+'<br>'+esc(x.realizo)+
+          (x.tareas?'<div class="det">Hizo: '+esc(x.tareas)+'</div>':'')+
+          (x.noHechas?'<div class="det">No hizo: '+esc(x.noHechas)+'</div>':'')+
+          (x.sinStock?'<div class="det rojo">Sin stock: '+esc(x.sinStock)+'</div>':'')+
+          (x.obs?'<div class="det">Obs: '+esc(x.obs)+'</div>':'')+'</div>';
+      }).join('');
+    })
+    .catch(function(){ box.innerHTML='<p class="ayuda">No se pudo cargar. Revisá la conexión.</p>'; });
+}
+
 function todasTareas(){ return tipo.diario.concat(tipo.periodicas); }
 function tarea(i){ tareasSel[i]=!tareasSel[i]; $('t'+i).classList.toggle('on',tareasSel[i]); validar(); }
 function todasDiarias(){ for(var i=0;i<tipo.diario.length;i++){ tareasSel[i]=true; $('t'+i).classList.add('on'); } validar(); }
@@ -243,7 +297,7 @@ function repo(i,v){
   $('rn'+i).classList.toggle('on',repoSel[i]==='Sin stock');
 }
 function validar(){
-  var ok = lugarId && $('quien').value && tipo && todasTareas().some(function(_,i){return tareasSel[i]});
+  var ok = lugarId && quienNombre && /^\d{4}$/.test($('clave').value) && tipo && todasTareas().some(function(_,i){return tareasSel[i]});
   $('btnEnviar').disabled=!ok;
 }
 
@@ -251,7 +305,7 @@ function enviar(){
   var tt=todasTareas();
   var datos={
     lugar: LUGARES[lugarId][0],
-    quien: $('quien').value,
+    clave: $('clave').value,
     hechas: tt.filter(function(_,i){return tareasSel[i]}),
     noHechas: tipo.diario.filter(function(_,i){return !tareasSel[i]}),
     repuesto: tipo.repo.filter(function(_,i){return repoSel[i]==='Repuesto'}),
@@ -261,8 +315,13 @@ function enviar(){
   var b=$('btnEnviar'); b.disabled=true; b.textContent='Registrando…';
   fetch(URL_SCRIPT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(datos)})
     .then(function(r){return r.json()})
-    .then(function(res){ if(!res.ok) throw new Error(res.error); mostrar(datos,res); })
-    .catch(function(){ b.disabled=false; b.textContent='Registrar limpieza'; alert('No se pudo registrar. Revisá la conexión e intentá de nuevo.'); });
+    .then(function(res){ if(!res.ok){ var e=new Error(res.error); e.srv=true; throw e; } datos.quien=res.quien; mostrar(datos,res); })
+    .catch(function(err){
+      b.textContent='Registrar limpieza';
+      if(err.srv){ alert('⚠️ '+err.message); $('clave').value=''; quienNombre=''; setQuien('',''); $('clave').focus(); }
+      else alert('No se pudo registrar. Revisá la conexión e intentá de nuevo.');
+      validar();
+    });
 }
 
 function mostrar(datos,res){
