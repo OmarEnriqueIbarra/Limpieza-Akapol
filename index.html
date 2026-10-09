@@ -46,7 +46,9 @@
   .reg{border-left:4px solid var(--az);background:#f8f9fc;border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:.88rem;line-height:1.4}
   .reg .det{color:var(--gris);font-size:.82rem}
   .reg .det.rojo{color:var(--rojo)}
-  .reg .ver{color:var(--verde);font-weight:600;font-size:.8rem}
+  .reg .chk{display:flex;align-items:center;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid #e3e7ee;font-size:.85rem;font-weight:600;color:var(--gris);cursor:pointer}
+  .reg .chk input{width:22px;height:22px;margin:0;accent-color:var(--verde)}
+  .reg .chk.on{color:var(--verde)}
   .msg{border-radius:10px;padding:14px;margin-bottom:10px;font-size:.95rem;line-height:1.45}
   .msg.ok{background:var(--verde2);color:var(--verde)}
   .msg.no{background:var(--rojo2);color:var(--rojo)}
@@ -277,15 +279,36 @@ function verHistorial(){
       if(!res.ok) throw new Error(res.error);
       if(!res.registros.length){ box.innerHTML='<p class="ayuda">Sin limpiezas registradas en los últimos 7 días.</p>'; return; }
       box.innerHTML=res.registros.map(function(x){
-        return '<div class="reg"><b>'+esc(x.fecha)+' · '+esc(x.hora)+'</b> · '+esc(x.turno)+
-          (x.verificado?' <span class="ver">✔ Verificado</span>':'')+'<br>'+esc(x.realizo)+
+        return '<div class="reg"><b>'+esc(x.fecha)+' · '+esc(x.hora)+'</b> · '+esc(x.turno)+'<br>'+esc(x.realizo)+
           (x.tareas?'<div class="det">Hizo: '+esc(x.tareas)+'</div>':'')+
           (x.noHechas?'<div class="det">No hizo: '+esc(x.noHechas)+'</div>':'')+
           (x.sinStock?'<div class="det rojo">Sin stock: '+esc(x.sinStock)+'</div>':'')+
-          (x.obs?'<div class="det">Obs: '+esc(x.obs)+'</div>':'')+'</div>';
+          (x.obs?'<div class="det">Obs: '+esc(x.obs)+'</div>':'')+
+          '<label class="chk'+(x.verificado?' on':'')+'"><input type="checkbox" data-ts="'+x.ts+'"'+(x.verificado?' checked':'')+' onchange="verificar(this)"> <span>'+(x.verificado?'Verificado'+(x.por?' · '+esc(x.por):''):'Verificado')+'</span></label></div>';
       }).join('');
     })
     .catch(function(){ box.innerHTML='<p class="ayuda">No se pudo cargar. Revisá la conexión.</p>'; });
+}
+
+// Verificación del supervisor (la clave se pide una vez y se valida en el servidor)
+var claveSup='';
+function verificar(cb){
+  var valor=cb.checked, lab=cb.parentNode;
+  if(!claveSup){
+    claveSup=(prompt('Clave para verificar:')||'').trim();
+    if(!claveSup){ cb.checked=!valor; return; }
+  }
+  cb.disabled=true;
+  fetch(URL_SCRIPT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({accion:'verificar',pin:claveSup,ts:Number(cb.getAttribute('data-ts')),lugar:LUGARES[lugarId][0],valor:valor})})
+    .then(function(r){return r.json()})
+    .then(function(res){
+      if(!res.ok){ if(res.clave) claveSup=''; throw new Error(res.error); }
+      lab.classList.toggle('on',valor);
+      lab.querySelector('span').textContent='Verificado'+(valor&&res.por?' · '+res.por:'');
+    })
+    .catch(function(err){ cb.checked=!valor; alert('⚠️ '+(err.message||'No se pudo guardar. Revisá la conexión.')); })
+    .then(function(){ cb.disabled=false; });
 }
 
 function todasTareas(){ return tipo.diario.concat(tipo.periodicas); }
